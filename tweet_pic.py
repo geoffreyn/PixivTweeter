@@ -14,7 +14,8 @@ from search_terms import SEARCH_DICT
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 IMAGE_PATH = SCRIPT_DIR + '/Downloaded_Images'
 RECENT_TWEETS_FILE = SCRIPT_DIR + '/recent_tweets.dat'
-NUM_RECENT_TWEETS = 200 # Number of recent posts to track
+NUM_RECENT_TWEETS = 200   # Number of recent posts to track
+
 
 class TwitterAPI(object):
 
@@ -236,6 +237,7 @@ def main():
 
     print image
 
+    
 if __name__ == '__main__':
     main()
 
