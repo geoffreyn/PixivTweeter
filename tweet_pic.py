@@ -8,13 +8,13 @@ import re
 import random
 import time
 
-from credentials import CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET
+from credentials import CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET, BITLY_TOKEN
 from search_terms import SEARCH_DICT
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 IMAGE_PATH = SCRIPT_DIR + '/Downloaded_Images'
 RECENT_TWEETS_FILE = SCRIPT_DIR + '/recent_tweets.dat'
-NUM_RECENT_TWEETS = 72 # Number of recent posts to track
+NUM_RECENT_TWEETS = 200 # Number of recent posts to track
 
 class TwitterAPI(object):
 
@@ -44,18 +44,20 @@ class Image(object):
         self.uploadTime = None
         self.photoURL = None
         self.accessTime = None
+        self.shortURL = None
         
     def __str__(self):
         title_str = 'Title: {0}\n'.format(self.title.encode('utf-8'))
         imageId_str = 'ID: {0}\n'.format(self.imageId.encode('utf-8'))
         name_str = 'Illustrator: {0}\n'.format(self.illustName.encode('utf-8'))
         id_str = 'Illustrator ID: {0}\n'.format(self.illustId)
-        illustURL_str = 'Illustrator\'s Page: {0}\n'.format(self.site + self.illustURL)
+        illustURL_str = 'Illustrator\'s Page: {0},\t'.format(self.site + self.illustURL)
+        short_illustURL_str = 'Shortned: {0}\n'.format(self.shortURL)
         photo_str = 'Photo URL: {0}\n'.format(self.photoURL)
         uploadTime_str = 'Uploaded on: {0}\n'.format(self.uploadTime.ctime())
         accessTime_str = 'First accessed on: {0}\n'.format(self.accessTime.ctime())
         
-        full_str = title_str + name_str + id_str + illustURL_str + photo_str + uploadTime_str + accessTime_str
+        full_str = title_str + name_str + id_str + illustURL_str + short_illustURL_str + photo_str + uploadTime_str + accessTime_str
         return full_str
 
     def get_image(self):
@@ -72,19 +74,35 @@ class Image(object):
         
         with open(LOCAL_IMG_FILE, 'wb') as f:
             f.write(res.content)
-            
         return LOCAL_IMG_FILE
+
+    def shorten_illust_url(self):
+        shorten_url = 'https://api-ssl.bitly.com/v3/shorten'
+        payload = {'access_token': BITLY_TOKEN, 'longUrl': (self.site + self.illustURL).encode('ascii'), 'domain':'bit.ly'}
+        res = requests.get(shorten_url, params = payload)
+        try:
+            self.shortURL = res.json()['data']['url']
+            return self.shortURL
+        except:
+            return None
 
     def post_tweet(self):
         '''Get image, format tweet, post tweet'''
         twitter = TwitterAPI()
         LOCAL_IMG_FILE = self.get_image()
+        shortURL = self.shorten_illust_url()
         
         # Twitter uses a url shortner which removes the php request for the illustrator
-        #tweetMsg = '{0} (id: {1}, {2}) - {3}. '.format(self.illustName.encode('utf-8'), self.illustId, self.site + self.illustURL, self.title.encode('utf-8'))
+        # tweetMsg = '{0} (id: {1}, {2}) - {3}. '.format(self.illustName.encode('utf-8'), self.illustId, self.site + self.illustURL, self.title.encode('utf-8'))
         
-        tweetMsg = '{0} (id: {1}) - Title: {2}. '.format(self.illustName.encode('utf-8'), self.illustId, self.title.encode('utf-8'))
+        # Too cumbersome
+        # tweetMsg = '{0} (id: {1}) - Title: {2}.  Illust: {3}'.format(self.illustName.encode('utf-8'), self.illustId, self.title.encode('utf-8'), shortURL)
         
+        if shortURL is not None:
+            tweetMsg = '{0} - {1}.  Illustrator: {2}'.format(self.illustName.encode('utf-8'), self.title.encode('utf-8'), shortURL)
+        else:
+            tweetMsg = '{0} - {1}.'.format(self.illustName.encode('utf-8'), self.title.encode('utf-8'))
+ 
         twitter.tweet_with_img(LOCAL_IMG_FILE, tweetMsg)
 
     def tweeted_recently(self):
@@ -115,8 +133,7 @@ def get_recent_tweets():
 
     return recent_tweets
 
-
-def fetch_imagelist():
+def fetch_imagelist(page_num):
     '''Find webpage on Pixiv.  Return HTML content.'''
     SITE_URL = 'http://www.pixiv.net/search.php'
     NUM_REQUEST_ATTEMPTS = 5 # Number of times to attempt to query search page
@@ -126,7 +143,7 @@ def fetch_imagelist():
         'word': SEARCH_DICT['tags'],
         's_mode': 's_tag_full',
         'order': 'date_d', 
-        'p': random.randint(0,SEARCH_DICT['page_lim'])
+        'p': page_num
     }
 
     # Get and parse page
@@ -197,20 +214,21 @@ def parse_images(page):
 def main():
     image_tweeted = False
 
-    # Get a page of pets for each shelter in shelters.py
-    image_page = fetch_imagelist()
-    image_list = parse_images(image_page)
+    while not image_tweeted:
+        # Get a page of images
+        image_page = fetch_imagelist(random.randint(0,SEARCH_DICT['page_lim']))
+        image_list = parse_images(image_page)
 
-    # Tweet a random pet from list
-    random.shuffle(image_list)
-    for image in image_list:
-        if not image.tweeted_recently():
-            image.post_tweet()
-            image.update_recent_tweets()
-            image_tweeted = True
-            break
+        # Tweet a random image from list
+        random.shuffle(image_list)
+        for image in image_list:
+            if not image.tweeted_recently():
+                image.post_tweet()
+                image.update_recent_tweets()
+                image_tweeted = True
+                break
 
-    # If all pets recently tweeted, select pet at random, post tweet
+    # If all images recently tweeted, select image_tweeted at random, post tweet
     if not image_tweeted:
         image = random.choice(image_list)
         image.post_tweet()
