@@ -1,7 +1,7 @@
-# Pixiv Twitter Bot (@key_images)[http://twitter.com/key_images]
+# Pixiv Twitter Bot [@key_images](http://twitter.com/key_images)
 This is a bot that retrieves images from Pixiv and posts them to twitter.
 
-Adapted from (CutePetsBmore)[https://github.com/Ryan-J-Smith/CutePetsBmore].
+Adapted from [CutePetsBmore](https://github.com/Ryan-J-Smith/CutePetsBmore).
 
 ## Quickstart:
 
