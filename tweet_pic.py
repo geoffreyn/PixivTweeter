@@ -106,7 +106,7 @@ class Image(object):
         twitter.tweet_with_img(LOCAL_IMG_FILE, tweetMsg)
 
     def tweeted_recently(self):
-        '''Check to determine whether pet has been tweeted recently''' 
+        '''Check to determine whether image has been tweeted recently''' 
         return self.photoURL in get_recent_tweets()
 
     def update_recent_tweets(self):
@@ -123,7 +123,7 @@ class Image(object):
 
 
 def get_recent_tweets():
-    '''Return list of URLs to recently tweeted pets'''
+    '''Return list of URLs to recently tweeted images'''
     # Get recent tweets from local file if they exist
     if os.path.isfile(RECENT_TWEETS_FILE):
         with open(RECENT_TWEETS_FILE, 'r') as f:
@@ -159,7 +159,7 @@ def fetch_imagelist(page_num):
 
     
 def parse_images(page):
-    '''Extract content from petango page, return a list of RescuePet objects'''
+    '''Extract content from Pixiv page, return a list of Image objects'''
     image_list = []
     
     for thumbnails in page.find_all('li',{'class':'image-item'}):
@@ -195,7 +195,7 @@ def parse_images(page):
         # Use the medium-size images instead of thumbnails
         photoURL = photoURL.replace('150x150','600x600')
         
-        # Set pet attributes
+        # Set image attributes
         newImage.title = title
         newImage.illustName = illustName
         newImage.uploadTime = uploadTime
@@ -205,7 +205,7 @@ def parse_images(page):
         newImage.accessTime = accessTime
         newImage.imageId = imageId
 
-        # Add pet to list
+        # Add image to list
         image_list.append(newImage)
     
     return image_list
