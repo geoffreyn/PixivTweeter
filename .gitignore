@@ -1,0 +1,6 @@
+.DS_Store
+*.pyc
+*.log
+*jpg
+credentials.py
+recent_tweets.dat
