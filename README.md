@@ -23,7 +23,7 @@ Adapted from [CutePetsBmore](https://github.com/Ryan-J-Smith/CutePetsBmore).
 ### Schedule regular tweeting with crontab (Linux):
 
 1. From the command line, edit the crontab file: `crontab -e`
-1. Schedule the script to run every hour using a line similar to: `0 * * * * /usr/bin/python /path/to/tweet_pic.py >> /path/to/log.log) 2>&1`
+1. Schedule the script to run every `x` hours using a line similar to: `0 */x * * * /usr/bin/python /path/to/tweet_pic.py >> /path/to/log.log 2>&1`
 
 ## Notes:
 
