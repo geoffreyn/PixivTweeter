@@ -9,20 +9,29 @@ import re
 import random
 import time
 
-from credentials import CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET, BITLY_TOKEN
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-IMAGE_PATH = SCRIPT_DIR + '/Downloaded_Images'
 CONFIG_FILE = SCRIPT_DIR + '/config.ini'
-RECENT_TWEETS_FILE = SCRIPT_DIR + '/recent_tweets.dat'
-NUM_RECENT_TWEETS = 200   # Number of recent posts to track
 
+cf = configparser.RawConfigParser()
+cf.read(CONFIG_FILE)
+   
+# Define path structure and globals
+for item in cf['Default'].items():
+    globals()[item[0].upper()] = eval(item[1])
 
+# Define Credential variables for accessing Twitter and bit.ly APIs
+for item in cf['Credentials'].items():
+    globals()[item[0].upper()] = item[1].encode('ascii')
+    
+        
+        
+        
 class TwitterAPI(object):
 
     def __init__(self): 
         auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
         auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+        
         self.api = tweepy.API(auth)
     
     def tweet(self, message):
@@ -61,7 +70,7 @@ class Image(object):
         photo_str = 'Photo URL: {0}\n'.format(self.photoURL)
         uploadTime_str = 'Uploaded on: {0}\n'.format(self.uploadTime.ctime())
         accessTime_str = 'First accessed on: {0}\n'.format(self.accessTime.ctime())
-        search_str = 'Searched tag/page: {0},{1}\n'.format(self.searchTerm,self.searchPage)
+        search_str = 'Searched tag, page: {0}, {1}\n'.format(self.searchTerm,self.searchPage)
         
         full_str = title_str + name_str + id_str + illustURL_str + short_illustURL_str + photo_str + uploadTime_str + accessTime_str + search_str
         return full_str
@@ -104,6 +113,7 @@ class Image(object):
         shorten_url = 'https://api-ssl.bitly.com/v3/shorten'
         payload = {'access_token': BITLY_TOKEN, 'longUrl': (self.site + self.illustURL).encode('ascii'), 'domain':'bit.ly'}
         res = requests.get(shorten_url, params = payload)
+        
         try:
             self.shortURL = res.json()['data']['url']
             return self.shortURL
@@ -121,6 +131,7 @@ class Image(object):
         
         # Too cumbersome
         # tweetMsg = '{0} (id: {1}) - Title: {2}.  Illust: {3}'.format(self.illustName.encode('utf-8'), self.illustId, self.title.encode('utf-8'), shortURL)
+        
         
         if shortURL is not None:
             tweetMsg = '{0} - {1}.  Illustrator: {2}'.format(self.illustName.encode('utf-8'), self.title.encode('utf-8'), shortURL)
@@ -237,11 +248,7 @@ def parse_images(page, page_term, page_num):
     return image_list
 
     
-def configure():
-    
-    ## Process config.ini file
-    cf = configparser.RawConfigParser()
-    cf.read(CONFIG_FILE)
+def configure_images(cf):
     
     # The config file contains the raw string form of the list of search tags 
     #  and corresponding number of pages, so evaluate them
@@ -273,11 +280,24 @@ def configure():
     cf.set('PixivSearch','PAGE_LIMS', str(PAGE_LIMS))
     with open(CONFIG_FILE, 'wb') as configOut:
         cf.write(configOut)
+        
     return SEARCH_TAGS, PAGE_LIMS
     
-    
+   
 def main():
-    SEARCH_TAGS, PAGE_LIMS = configure()
+
+    cf = configparser.RawConfigParser()
+    cf.read(CONFIG_FILE)
+       
+    for item in cf['Credentials'].items():
+        #exec('global ' + item[0].encode('ascii').upper())
+        #exec(item[0].encode('ascii').upper() + ' = ' + iipyttem[1].encode('ascii'))
+        
+        globals()[item[0].upper()] = item[1]
+        
+        
+    ## Process config.ini file
+    SEARCH_TAGS, PAGE_LIMS = configure_images(cf)
     
     ## Process and Tweet Images
     image_tweeted = False
@@ -285,13 +305,14 @@ def main():
     while not image_tweeted:
         try:
             # Randomly select a tag and a page from the configuration file
-            selected_index = random.randint(0,len(SEARCH_TAGS))
+            selected_index = random.randint(0,len(SEARCH_TAGS)-1)
             selected_tag = SEARCH_TAGS[selected_index]
+            selected_page = random.randint(0,PAGE_LIMS[selected_index])
             
             # Get a page of images
-            image_page = fetch_imagelist(selected_tag,str(random.randint(0,PAGE_LIMS[selected_index])))
-            image_list = parse_images(image_page,selected_tag,selected_index)
-
+            image_page = fetch_imagelist(selected_tag,str(selected_page))
+            image_list = parse_images(image_page,selected_tag,selected_page)
+            
             # Tweet a random image from list
             random.shuffle(image_list)
             for image in image_list:
@@ -301,7 +322,7 @@ def main():
                     image_tweeted = True
                     break
         except:
-            print 'Failed on {0},{1}, retrying'.format(selected_tag,selected_index)
+            print 'Failed on {0}, page: {1}.  Retrying...'.format(selected_tag,selected_page)
 
     # If all images recently tweeted, select image_tweeted at random, post tweet
     if not image_tweeted:
