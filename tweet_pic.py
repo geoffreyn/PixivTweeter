@@ -283,22 +283,25 @@ def main():
     image_tweeted = False
 
     while not image_tweeted:
-        # Randomly select a tag and a page from the configuration file
-        selected_index = random.randint(0,len(SEARCH_TAGS))
-        selected_tag = SEARCH_TAGS[selected_index]
-        
-        # Get a page of images
-        image_page = fetch_imagelist(selected_tag,str(random.randint(0,PAGE_LIMS[selected_index])))
-        image_list = parse_images(image_page,selected_tag,selected_index)
+        try:
+            # Randomly select a tag and a page from the configuration file
+            selected_index = random.randint(0,len(SEARCH_TAGS))
+            selected_tag = SEARCH_TAGS[selected_index]
+            
+            # Get a page of images
+            image_page = fetch_imagelist(selected_tag,str(random.randint(0,PAGE_LIMS[selected_index])))
+            image_list = parse_images(image_page,selected_tag,selected_index)
 
-        # Tweet a random image from list
-        random.shuffle(image_list)
-        for image in image_list:
-            if not image.tweeted_recently():
-                image.post_tweet()
-                image.update_recent_tweets()
-                image_tweeted = True
-                break
+            # Tweet a random image from list
+            random.shuffle(image_list)
+            for image in image_list:
+                if not image.tweeted_recently():
+                    image.post_tweet()
+                    image.update_recent_tweets()
+                    image_tweeted = True
+                    break
+        except:
+            print 'Failed on {0},{1}, retrying'.format(selected_tag,selected_index)
 
     # If all images recently tweeted, select image_tweeted at random, post tweet
     if not image_tweeted:
