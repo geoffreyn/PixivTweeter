@@ -285,17 +285,7 @@ def configure_images(cf):
     
    
 def main():
-
-    cf = configparser.RawConfigParser()
-    cf.read(CONFIG_FILE)
        
-    for item in cf['Credentials'].items():
-        #exec('global ' + item[0].encode('ascii').upper())
-        #exec(item[0].encode('ascii').upper() + ' = ' + iipyttem[1].encode('ascii'))
-        
-        globals()[item[0].upper()] = item[1]
-        
-        
     ## Process config.ini file
     SEARCH_TAGS, PAGE_LIMS = configure_images(cf)
     
